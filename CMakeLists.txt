@@ -23,8 +23,14 @@ target_include_directories(libinterleavingdistance
 add_executable(interleavingdistance
     main.cpp
 )
-
 target_link_libraries(interleavingdistance
+    PRIVATE libinterleavingdistance
+)
+
+add_executable(interleavingcli
+    experiments/interleavingcli.cpp
+)
+target_link_libraries(interleavingcli
     PRIVATE libinterleavingdistance
 )
 
