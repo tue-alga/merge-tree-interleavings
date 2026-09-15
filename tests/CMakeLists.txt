@@ -7,7 +7,7 @@ add_executable(interleavingdistance_test
 )
 
 target_link_libraries(interleavingdistance_test
-    PRIVATE interleavingdistance
+    PRIVATE libinterleavingdistance
 )
 
 target_include_directories(interleavingdistance_test
