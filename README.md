@@ -20,6 +20,6 @@ cmake --build build
 
 ## References
 
-[1] T. Beurskens, E.T. Gæde, T. Ophelders, W. Sonke, B. Speckmann, and K. Verbeek. A practical algorithm for (geometry-aware) interleavings between merge trees. *In Proc. 24th International Symposium on Experimental Algorithms (SEA)*, pages 6:1–6:18, 2026, [doi](doi:10.4230/LIPIcs.SEA.2026.6.).
+[1] T. Beurskens, E.T. Gæde, T. Ophelders, W. Sonke, B. Speckmann, and K. Verbeek. A practical algorithm for (geometry-aware) interleavings between merge trees. *In Proc. 24th International Symposium on Experimental Algorithms (SEA)*, pages 6:1–6:18, 2026, [doi](https://doi.org/10.4230/LIPIcs.SEA.2026.6.).
 
-[2] E.F. Touli and Y.Wang. FPT-algorithms for computing the Gromov-Hausdorff and interleaving distances between trees. *Journal of Computational Geometry*, 13:89–124, 2022, [doi](doi:10.20382/jocg.v13i1a4).
+[2] E.F. Touli and Y.Wang. FPT-algorithms for computing the Gromov-Hausdorff and interleaving distances between trees. *Journal of Computational Geometry*, 13:89–124, 2022, [doi](https://doi.org/10.20382/jocg.v13i1a4).
