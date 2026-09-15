@@ -1,0 +1,17 @@
+build/
+out/
+bin/
+
+*.obj
+*.o
+*.pdb
+*.ilk
+*.exe
+*.dll
+*.so
+*.a
+*.lib
+
+.vs/
+.vscode/
+.idea/
