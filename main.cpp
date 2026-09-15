@@ -10,7 +10,7 @@ int main() {
 
 	Interleaving interleaving = computeInterleavingDistance(t1, t2, SearchAlgorithm::DeltaLinearSearch, DeltaGoodMapAlgorithm::DP);
 
-    auto trees = MergeTreeReader::readMergeTrees("data/test.txt");
+    auto trees = MergeTreeReader::readMergeTrees("data/source-tree.txt", "data/target-tree.txt", "data/restriction-matrix.txt");
     interleaving = computeInterleavingDistance(std::make_shared<MergeTree>(trees.m_sourceTree), std::make_shared<MergeTree>(trees.m_targetTree), SearchAlgorithm::DeltaExponentialSearch, DeltaGoodMapAlgorithm::DP, trees.m_restrictions);
     std::cout << interleaving.getDelta();
 

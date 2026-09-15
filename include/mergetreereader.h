@@ -14,12 +14,14 @@ class MergeTreeReader {
 				RestrictionMatrix m_restrictions;
 		};
 
-		static MergeTrees readMergeTrees(const std::string& fileName);
+		static MergeTrees readMergeTrees(const std::string& sourceTreeFile, 
+			const std::string& targetTreeFile, 
+			const std::string& restrictionMatrixFile);
 
 	private:
-		static void readMergeTree(MergeTree& tree, const std::vector<std::string>& numbers, int& index);
+		static void readMergeTree(MergeTree& tree, const std::vector<std::string>& numbers);
 		static void readRestrictionMatrix(RestrictionMatrix& matrix, int width, int height,
-		                                  const std::vector<std::string>& numbers, int& index);
+		                                  const std::vector<std::string>& numbers);
 		static void extendRestrictionMatrix(RestrictionMatrix& matrix,
 		                                    const MergeTree& targetTree);
 };

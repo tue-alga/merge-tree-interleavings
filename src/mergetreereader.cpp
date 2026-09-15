@@ -5,27 +5,35 @@
 #include <sstream>
 #include <string>
 
-MergeTreeReader::MergeTrees MergeTreeReader::readMergeTrees(const std::string& fileName) {
-
+std::vector<std::string> readFile(const std::string& fileName) {
 	std::ifstream file(fileName);
 	if (!file) {
 		throw std::runtime_error("File could not be read");
 	}
 
 	std::vector<std::string> numbers;
+	
 	std::string token;
 	while (file >> token) {
 		numbers.push_back(token);
 	}
+	return numbers;
+}
 
-	int index = 0;
+MergeTreeReader::MergeTrees MergeTreeReader::readMergeTrees(const std::string& sourceTreeFile, 
+					const std::string& targetTreeFile, 
+					const std::string& restrictionMatrixFile) {
+
+	std::vector<std::string> sourceTreeNumbers = readFile(sourceTreeFile);
+	std::vector<std::string> targetTreeNumbers = readFile(targetTreeFile);
+	std::vector<std::string> restrictionMatrixNumbers = readFile(restrictionMatrixFile);
 
 	MergeTrees result;
 	try {
-		readMergeTree(result.m_sourceTree, numbers, index);
-		readMergeTree(result.m_targetTree, numbers, index);
+		readMergeTree(result.m_sourceTree, sourceTreeNumbers);
+		readMergeTree(result.m_targetTree, targetTreeNumbers);
 		readRestrictionMatrix(result.m_restrictions, result.m_targetTree.leafCount(),
-		                      result.m_sourceTree.leafCount(), numbers, index);
+		                      result.m_sourceTree.leafCount(), restrictionMatrixNumbers);
 		extendRestrictionMatrix(result.m_restrictions, result.m_targetTree);
 	} catch (std::runtime_error& e) {
 		std::cerr << e.what() << '\n';
@@ -35,8 +43,8 @@ MergeTreeReader::MergeTrees MergeTreeReader::readMergeTrees(const std::string& f
 	return result;
 }
 
-void MergeTreeReader::readMergeTree(MergeTree& tree, const std::vector<std::string>& numbers, int& index) {
-	bool ok;
+void MergeTreeReader::readMergeTree(MergeTree& tree, const std::vector<std::string>& numbers) {
+	int index = 0;
 
 	// Read leaves.
 	int leafCount;
@@ -124,8 +132,9 @@ void MergeTreeReader::readMergeTree(MergeTree& tree, const std::vector<std::stri
 }
 
 void MergeTreeReader::readRestrictionMatrix(RestrictionMatrix& matrix, int width, int height,
-                                            const std::vector<std::string>& numbers, int& index) {
-	bool ok;
+                                            const std::vector<std::string>& numbers) {
+
+	int index = 0;
 	matrix.clear();
 	for (int i = 0; i < height; i++) {
 		std::vector<double> row;
