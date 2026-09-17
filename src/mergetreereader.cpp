@@ -143,7 +143,7 @@ void MergeTreeReader::readRestrictionMatrix(RestrictionMatrix& matrix, int width
 			try {
 				value = std::stod(numbers[index++]);
 			} catch (...) {
-				throw std::runtime_error("invalid restriction matrix value");
+				throw std::runtime_error("invalid restriction matrix");
 			}
 			row.push_back(value);
 		}

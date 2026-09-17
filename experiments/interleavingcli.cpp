@@ -30,7 +30,7 @@ void runTrial(std::string path, const std::shared_ptr<MergeTree>& sourceTree, co
 	});
 
 	std::cout << path << "\t" << algorithmName << "\t" << interleaving.getDelta() << "\t" << std::chrono::duration<double>(Clock::now() - timerStart).count() << "\t" << results.size();
-	for (DeltaResult result : results) {
+	for (DeltaResult& result : results) {
 		double seconds = std::chrono::duration<double>(std::chrono::nanoseconds(result.nsecs)).count();
 		std::cout << "\t" << result.delta << "\t" << seconds;
 	}
@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
 
 	MergeTreeReader::MergeTrees trees;
 	try {
-		MergeTreeReader::MergeTrees trees = MergeTreeReader::readMergeTrees(sourceTreeFile, targetTreeFile, restrictionMatrixFile);
+		trees = MergeTreeReader::readMergeTrees(sourceTreeFile, targetTreeFile, restrictionMatrixFile);
 	} catch (const std::runtime_error& e) {
 		std::cerr << e.what() << std::endl;
 		return 1;
