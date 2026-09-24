@@ -116,7 +116,7 @@ def get_ttk_objects(file_name, scalar_field_name, threshold):
         terrain = XMLPolyDataReader(FileName=[file_name])
     
     triangulation = Tetrahedralize(Input=terrain)
-    
+    print("triangulation: ", triangulation)
     simplified_terrain = TTKTopologicalSimplificationByPersistence(Input=triangulation)
     simplified_terrain.Set(
         InputArray=['POINTS', scalar_field_name],

@@ -16,6 +16,21 @@
 #define DEBUG_INTERLEAVING false
 #define BITSET_SIZE 128
 
+// Utility function to merge maps
+inline void insertInto(std::map<int, int>& lhs, const std::map<int, int>& rhs) {
+	lhs.insert(rhs.begin(), rhs.end());
+}
+
+
+/// Computes a finite set of candidates for the interleaving distance between
+/// the two given trees. See [Touli and Wang, 2022], Lemma 8.
+///
+/// The candidate set is returned as a list in ascending order with no
+/// duplicates. 0.0 is always a candidate and hence is always the first element
+/// of the list. Although the (restricted) interleaving distance can be infinite
+/// (if the restrictions forbid all interleavings, for example), ∞ is not
+/// returned in the list; it is instead handled separately in \ref
+/// computeInterleavingDistance.
 std::vector<double> interleavingDistanceCandidates(const MergeTree& T1, const MergeTree& T2,
                                                    const RestrictionMatrix& restrictions) {
 	std::vector<double> candidates = {0.0};
@@ -107,6 +122,18 @@ RestrictionMatrix createEmptyRestrictionMatrix(const MergeTree& sourceTree,
 	return result;
 }
 
+/// Computes the levels for each augmented tree. The levels are all the heights
+/// of the vertices of the tree itself, plus the shifted heights of the vertices
+/// of the other tree. Returns a pair consisting of the `sourceLevels` (the
+/// levels for the augmented source tree) and the `targetLevels` (the levels for
+/// the augmented target tree).
+///
+/// \note We're computing the `sourceLevels` and `targetLevels` independently,
+/// even though the `targetLevels` are simply the `sourceLevels` shifted by δ.
+/// However, we want to make sure that the vertex heights of the target tree are
+/// included exactly, which (due to floating-point rounding errors) cannot
+/// necessarily be guaranteed if we compute `targetLevels` by adding δ to each
+/// of the `sourceLevels`.
 std::pair<std::vector<double>, std::vector<double>>
 computeLevels(const MergeTree& sourceTree, const MergeTree& targetTree, double delta) {
 
@@ -139,7 +166,11 @@ computeLevels(const MergeTree& sourceTree, const MergeTree& targetTree, double d
 	return {deduplicatedSourceLevels, deduplicatedTargetLevels};
 }
 
-std::optional<Interleaving> computeDeltaGoodMapSlow(const std::shared_ptr<MergeTree>& sourceTree,
+/// Determines if a δ-good map from `sourceTree` to `targetTree` exists, i.e.,
+/// if the interleaving distance between `sourceTree` and `targetTree` is
+/// upper-bounded by δ. This implements the dynamic program proposed by [Touli
+/// and Wang, 2022], §4.1. If so, this returns the interleaving.
+std::optional<Interleaving> computeDecisionDP(const std::shared_ptr<MergeTree>& sourceTree,
                                                     const std::shared_ptr<MergeTree>& targetTree,
                                                     double delta,
                                                     const RestrictionMatrix& restrictions,
@@ -266,212 +297,212 @@ bool isDisjoint(const std::vector<int>& a, const std::vector<int>& b) {
 	return true;
 }
 
-std::optional<Interleaving> computeDeltaGoodMapFast(const std::shared_ptr<MergeTree>& sourceTree,
-                                                    const std::shared_ptr<MergeTree>& targetTree,
-                                                    double delta,
-                                                    const RestrictionMatrix& restrictions,
-                                                    std::function<void(std::pair<double, double>)> onMovedSweepline) {
-	std::cerr << "    trying \033[1;1mδ = " << delta << "\033[1;0m..." << std::flush;
+// std::optional<Interleaving> computeDeltaGoodMapFast(const std::shared_ptr<MergeTree>& sourceTree,
+//                                                     const std::shared_ptr<MergeTree>& targetTree,
+//                                                     double delta,
+//                                                     const RestrictionMatrix& restrictions,
+//                                                     std::function<void(std::pair<double, double>)> onMovedSweepline) {
+// 	std::cerr << "    trying \033[1;1mδ = " << delta << "\033[1;0m..." << std::flush;
 
-	// Construct the augmented trees.
-	auto [sourceLevels, targetLevels] = computeLevels(*sourceTree, *targetTree, delta);
-	AugmentedTree sourceAugmented(*sourceTree, sourceLevels, restrictions);
-	AugmentedTree targetAugmented(*targetTree, targetLevels, restrictions);
+// 	// Construct the augmented trees.
+// 	auto [sourceLevels, targetLevels] = computeLevels(*sourceTree, *targetTree, delta);
+// 	AugmentedTree sourceAugmented(*sourceTree, sourceLevels, restrictions);
+// 	AugmentedTree targetAugmented(*targetTree, targetLevels, restrictions);
 
-	using SourceNodeSet = std::vector<int>;
+// 	using SourceNodeSet = std::vector<int>;
 
-	// We use a DP to compute feasible pairs for each level of the augmented
-	// trees, starting at the bottommost level and going upwards towards the
-	// trees' roots. To conserve memory, we store just the set of feasible pairs
-	// we're currently computing for the current level, and the set of feasible
-	// pairs we just computed for the previous level.
-	//
-	// feasiblePairs[w] = for target node w, all sets S for which (S, w) is a
-	//                    feasible pair
-	//
-	// Each set S is represented as an ordered vector of indices.
-	std::vector<std::set<SourceNodeSet>> feasiblePairs, childrenFeasiblePairs;
+// 	// We use a DP to compute feasible pairs for each level of the augmented
+// 	// trees, starting at the bottommost level and going upwards towards the
+// 	// trees' roots. To conserve memory, we store just the set of feasible pairs
+// 	// we're currently computing for the current level, and the set of feasible
+// 	// pairs we just computed for the previous level.
+// 	//
+// 	// feasiblePairs[w] = for target node w, all sets S for which (S, w) is a
+// 	//                    feasible pair
+// 	//
+// 	// Each set S is represented as an ordered vector of indices.
+// 	std::vector<std::set<SourceNodeSet>> feasiblePairs, childrenFeasiblePairs;
 
-	for (int level = 0; level < sourceLevels.size(); level++) {
-		std::cerr << "\033[1K\r"
-		          << "    trying \033[1;1mδ = " << delta << "\033[1;0m... level " << level << "/"
-		          << sourceLevels.size() << ", height " << sourceLevels[level] << std::flush;
+// 	for (int level = 0; level < sourceLevels.size(); level++) {
+// 		std::cerr << "\033[1K\r"
+// 		          << "    trying \033[1;1mδ = " << delta << "\033[1;0m... level " << level << "/"
+// 		          << sourceLevels.size() << ", height " << sourceLevels[level] << std::flush;
 
-		childrenFeasiblePairs = feasiblePairs;
-		feasiblePairs = std::vector<std::set<SourceNodeSet>>(targetAugmented.get(level).size(),
-		                                                     std::set<SourceNodeSet>{});
+// 		childrenFeasiblePairs = feasiblePairs;
+// 		feasiblePairs = std::vector<std::set<SourceNodeSet>>(targetAugmented.get(level).size(),
+// 		                                                     std::set<SourceNodeSet>{});
 
-		for (int targetIndex = 0; targetIndex < targetAugmented.get(level).size(); targetIndex++) {
-			int targetChildCount = targetAugmented.get(level, targetIndex).m_children.size();
+// 		for (int targetIndex = 0; targetIndex < targetAugmented.get(level).size(); targetIndex++) {
+// 			int targetChildCount = targetAugmented.get(level, targetIndex).m_children.size();
 
-			std::vector<SourceNodeSet> feasiblePairsToAdd;
+// 			std::vector<SourceNodeSet> feasiblePairsToAdd;
 
-			if (targetChildCount == 0) {
-				// Skip: we don't need to add any feasible pairs.
-				feasiblePairsToAdd.push_back({}); // TODO ???????????????
+// 			if (targetChildCount == 0) {
+// 				// Skip: we don't need to add any feasible pairs.
+// 				feasiblePairsToAdd.push_back({}); // TODO ???????????????
 
-			} else if (targetChildCount == 1) {
-				// Target node has one child.
-				int targetChildIndex = targetAugmented.get(level, targetIndex).m_children[0];
-				for (const SourceNodeSet& sourceNodeSet : childrenFeasiblePairs[targetChildIndex]) {
-					if (sourceNodeSet.empty()) {
-						// Source node set is empty. Need to check if the
-						// unmapped subtree in the target tree is not too high.
-						if (targetAugmented.get(level, targetIndex).m_depth > 2 * delta) {
-							continue;
-						}
-					}
+// 			} else if (targetChildCount == 1) {
+// 				// Target node has one child.
+// 				int targetChildIndex = targetAugmented.get(level, targetIndex).m_children[0];
+// 				for (const SourceNodeSet& sourceNodeSet : childrenFeasiblePairs[targetChildIndex]) {
+// 					if (sourceNodeSet.empty()) {
+// 						// Source node set is empty. Need to check if the
+// 						// unmapped subtree in the target tree is not too high.
+// 						if (targetAugmented.get(level, targetIndex).m_depth > 2 * delta) {
+// 							continue;
+// 						}
+// 					}
 
-					SourceNodeSet parents = sourceAugmented.parentsOf(level - 1, sourceNodeSet);
+// 					SourceNodeSet parents = sourceAugmented.parentsOf(level - 1, sourceNodeSet);
 
-					// Check if the children of the parentUnion are actually a
-					// subset of sourceNodeSet. If not, there is some extra
-					// subtree hanging off that we aren't mapping.
-					const std::vector<int> parentChildren =
-					    sourceAugmented.getChildren(level, parents);
-					if (parentChildren.size() != sourceNodeSet.size()) {
-						// It suffices to just check the sizes, as we
-						// already know that the parentChildren can only be
-						// a superset of source1NodeSet \union
-						// source2NodeSet.
-						continue;
-					}
+// 					// Check if the children of the parentUnion are actually a
+// 					// subset of sourceNodeSet. If not, there is some extra
+// 					// subtree hanging off that we aren't mapping.
+// 					const std::vector<int> parentChildren =
+// 					    sourceAugmented.getChildren(level, parents);
+// 					if (parentChildren.size() != sourceNodeSet.size()) {
+// 						// It suffices to just check the sizes, as we
+// 						// already know that the parentChildren can only be
+// 						// a superset of source1NodeSet \union
+// 						// source2NodeSet.
+// 						continue;
+// 					}
 
-					feasiblePairsToAdd.push_back(parents);
-				}
+// 					feasiblePairsToAdd.push_back(parents);
+// 				}
 
-			} else {
-				// Target node is a split node.
-				assert(targetChildCount == 2);
-				int targetChild1Index = targetAugmented.get(level, targetIndex).m_children[0];
-				int targetChild2Index = targetAugmented.get(level, targetIndex).m_children[1];
+// 			} else {
+// 				// Target node is a split node.
+// 				assert(targetChildCount == 2);
+// 				int targetChild1Index = targetAugmented.get(level, targetIndex).m_children[0];
+// 				int targetChild2Index = targetAugmented.get(level, targetIndex).m_children[1];
 
-				for (const SourceNodeSet& source1NodeSet : childrenFeasiblePairs[targetChild1Index]) {
-					if (source1NodeSet.empty()) {
-						if (targetAugmented.get(level - 1, targetChild1Index).m_depth >
-						    2 * delta - std::abs(targetAugmented.getLevelHeight(level) -
-						                         targetAugmented.getLevelHeight(level - 1))) {
-							continue;
-						}
-					}
+// 				for (const SourceNodeSet& source1NodeSet : childrenFeasiblePairs[targetChild1Index]) {
+// 					if (source1NodeSet.empty()) {
+// 						if (targetAugmented.get(level - 1, targetChild1Index).m_depth >
+// 						    2 * delta - std::abs(targetAugmented.getLevelHeight(level) -
+// 						                         targetAugmented.getLevelHeight(level - 1))) {
+// 							continue;
+// 						}
+// 					}
 
-					// TODO It would be more efficient to filter the lists of
-					// childrenFeasiblePairs beforehand, so that empty feasible
-					// pairs that fail the unmapped-height-criterion are already
-					// excluded. We could even avoid putting them into the
-					// feasiblePairs lists altogether, so we never see them in
-					// the first place! This is a bit confusing though, so for
-					// now we simply do it like this.
-					for (const SourceNodeSet& source2NodeSet :
-					     childrenFeasiblePairs[targetChild2Index]) {
-						if (source2NodeSet.empty()) {
-							if (targetAugmented.get(level - 1, targetChild2Index).m_depth >
-							    2 * delta - std::abs(targetAugmented.getLevelHeight(level) -
-							                         targetAugmented.getLevelHeight(level - 1))) {
-								continue;
-							}
-						}
+// 					// TODO It would be more efficient to filter the lists of
+// 					// childrenFeasiblePairs beforehand, so that empty feasible
+// 					// pairs that fail the unmapped-height-criterion are already
+// 					// excluded. We could even avoid putting them into the
+// 					// feasiblePairs lists altogether, so we never see them in
+// 					// the first place! This is a bit confusing though, so for
+// 					// now we simply do it like this.
+// 					for (const SourceNodeSet& source2NodeSet :
+// 					     childrenFeasiblePairs[targetChild2Index]) {
+// 						if (source2NodeSet.empty()) {
+// 							if (targetAugmented.get(level - 1, targetChild2Index).m_depth >
+// 							    2 * delta - std::abs(targetAugmented.getLevelHeight(level) -
+// 							                         targetAugmented.getLevelHeight(level - 1))) {
+// 								continue;
+// 							}
+// 						}
 
-						if (!isDisjoint(source1NodeSet, source2NodeSet)) {
-							continue;
-						}
+// 						if (!isDisjoint(source1NodeSet, source2NodeSet)) {
+// 							continue;
+// 						}
 
-						SourceNodeSet parents1 = sourceAugmented.parentsOf(level - 1, source1NodeSet);
-						SourceNodeSet parents2 = sourceAugmented.parentsOf(level - 1, source2NodeSet);
-						SourceNodeSet parentUnion;
-						std::set_union(parents1.begin(), parents1.end(), parents2.begin(),
-						               parents2.end(), std::back_inserter(parentUnion));
+// 						SourceNodeSet parents1 = sourceAugmented.parentsOf(level - 1, source1NodeSet);
+// 						SourceNodeSet parents2 = sourceAugmented.parentsOf(level - 1, source2NodeSet);
+// 						SourceNodeSet parentUnion;
+// 						std::set_union(parents1.begin(), parents1.end(), parents2.begin(),
+// 						               parents2.end(), std::back_inserter(parentUnion));
 
-						// Check if the children of the parentUnion are actually
-						// a subset of source1NodeSet \union source2Node set. If
-						// not, there is some extra subtree hanging off that we
-						// aren't mapping.
-						const std::vector<int> parentChildren =
-						    sourceAugmented.getChildren(level, parentUnion);
-						if (parentChildren.size() != source1NodeSet.size() + source2NodeSet.size()) {
-							// It suffices to just check the sizes, as we
-							// already know that the parentChildren can only be
-							// a superset of source1NodeSet \union
-							// source2NodeSet.
-							continue;
-						}
+// 						// Check if the children of the parentUnion are actually
+// 						// a subset of source1NodeSet \union source2Node set. If
+// 						// not, there is some extra subtree hanging off that we
+// 						// aren't mapping.
+// 						const std::vector<int> parentChildren =
+// 						    sourceAugmented.getChildren(level, parentUnion);
+// 						if (parentChildren.size() != source1NodeSet.size() + source2NodeSet.size()) {
+// 							// It suffices to just check the sizes, as we
+// 							// already know that the parentChildren can only be
+// 							// a superset of source1NodeSet \union
+// 							// source2NodeSet.
+// 							continue;
+// 						}
 
-						if (!parentUnion.empty() &&
-						    sourceAugmented.distanceOfLCA(level, parentUnion.front(),
-						                                  parentUnion.back()) > 2 * delta) {
-							continue;
-						}
+// 						if (!parentUnion.empty() &&
+// 						    sourceAugmented.distanceOfLCA(level, parentUnion.front(),
+// 						                                  parentUnion.back()) > 2 * delta) {
+// 							continue;
+// 						}
 
-						feasiblePairsToAdd.push_back(parentUnion);
-					}
-				}
-			}
+// 						feasiblePairsToAdd.push_back(parentUnion);
+// 					}
+// 				}
+// 			}
 
-			for (int i = 0; i < feasiblePairsToAdd.size(); i++) {
-				const SourceNodeSet& sourceNodeSet = feasiblePairsToAdd[i];
-				feasiblePairs[targetIndex].insert(sourceNodeSet);
-			}
+// 			for (int i = 0; i < feasiblePairsToAdd.size(); i++) {
+// 				const SourceNodeSet& sourceNodeSet = feasiblePairsToAdd[i];
+// 				feasiblePairs[targetIndex].insert(sourceNodeSet);
+// 			}
 
-			// TODO leaves
-			std::vector<int> sourceLeaves;
-			for (int sourceIndex = 0; sourceIndex < sourceAugmented.get(level).size(); sourceIndex++) {
-				if (sourceAugmented.get(level, sourceIndex).m_children.empty()) {
-					sourceLeaves.push_back(sourceIndex);
-				}
-			}
-			assert(sourceLeaves.size() <= 1); // TODO this is probably fine in practice, but ...
-			if (!sourceLeaves.empty()) {
-				int sourceLeafIndex = sourceLeaves[0];
-				// During the for loop we add elements to feasiblePairs, but we
-				// want to have i run only up until the original range of
-				// feasiblePairs.
-				for (int i = 0; i < feasiblePairsToAdd.size(); i++) {
-					const SourceNodeSet& sourceNodeSet = feasiblePairsToAdd[i];
+// 			// TODO leaves
+// 			std::vector<int> sourceLeaves;
+// 			for (int sourceIndex = 0; sourceIndex < sourceAugmented.get(level).size(); sourceIndex++) {
+// 				if (sourceAugmented.get(level, sourceIndex).m_children.empty()) {
+// 					sourceLeaves.push_back(sourceIndex);
+// 				}
+// 			}
+// 			assert(sourceLeaves.size() <= 1); // TODO this is probably fine in practice, but ...
+// 			if (!sourceLeaves.empty()) {
+// 				int sourceLeafIndex = sourceLeaves[0];
+// 				// During the for loop we add elements to feasiblePairs, but we
+// 				// want to have i run only up until the original range of
+// 				// feasiblePairs.
+// 				for (int i = 0; i < feasiblePairsToAdd.size(); i++) {
+// 					const SourceNodeSet& sourceNodeSet = feasiblePairsToAdd[i];
 
-					int minIndex = sourceNodeSet.empty()
-					                   ? sourceLeafIndex
-					                   : std::min(sourceNodeSet.front(), sourceLeafIndex);
-					int maxIndex = sourceNodeSet.empty()
-					                   ? sourceLeafIndex
-					                   : std::max(sourceNodeSet.back(), sourceLeafIndex);
+// 					int minIndex = sourceNodeSet.empty()
+// 					                   ? sourceLeafIndex
+// 					                   : std::min(sourceNodeSet.front(), sourceLeafIndex);
+// 					int maxIndex = sourceNodeSet.empty()
+// 					                   ? sourceLeafIndex
+// 					                   : std::max(sourceNodeSet.back(), sourceLeafIndex);
 
-					if (sourceAugmented.distanceOfLCA(level, minIndex, maxIndex) > 2 * delta) {
-						continue;
-					}
+// 					if (sourceAugmented.distanceOfLCA(level, minIndex, maxIndex) > 2 * delta) {
+// 						continue;
+// 					}
 
-					std::vector<int> extendedSourceNodeSet = sourceNodeSet;
-					extendedSourceNodeSet.push_back(sourceLeafIndex);
-					std::sort(extendedSourceNodeSet.begin(),
-					          extendedSourceNodeSet.end()); // TODO don't sort the entire thing, just insert in the right place
-					feasiblePairs[targetIndex].insert(extendedSourceNodeSet);
-				}
-			}
-		}
+// 					std::vector<int> extendedSourceNodeSet = sourceNodeSet;
+// 					extendedSourceNodeSet.push_back(sourceLeafIndex);
+// 					std::sort(extendedSourceNodeSet.begin(),
+// 					          extendedSourceNodeSet.end()); // TODO don't sort the entire thing, just insert in the right place
+// 					feasiblePairs[targetIndex].insert(extendedSourceNodeSet);
+// 				}
+// 			}
+// 		}
 
-		for (int i = 0; i < feasiblePairs.size(); i++) {
-			const std::set<SourceNodeSet>& set = feasiblePairs[i];
-			if (set.size() == 0) {
-				std::cerr << "\033[1K\r"
-				          << "    trying \033[1;1mδ = " << delta << "\033[1;0m";
-				std::cerr << " → \033[1;31mfalse\033[1;0m" << std::endl;
-				return std::nullopt;
-			}
-		}
-	}
+// 		for (int i = 0; i < feasiblePairs.size(); i++) {
+// 			const std::set<SourceNodeSet>& set = feasiblePairs[i];
+// 			if (set.size() == 0) {
+// 				std::cerr << "\033[1K\r"
+// 				          << "    trying \033[1;1mδ = " << delta << "\033[1;0m";
+// 				std::cerr << " → \033[1;31mfalse\033[1;0m" << std::endl;
+// 				return std::nullopt;
+// 			}
+// 		}
+// 	}
 
-	std::cerr << "\033[1K\r"
-	          << "    trying \033[1;1mδ = " << delta << "\033[1;0m";
+// 	std::cerr << "\033[1K\r"
+// 	          << "    trying \033[1;1mδ = " << delta << "\033[1;0m";
 
-	// A δ-good map exists if in the root-most layer, the one node in T1 forms a
-	// feasible valid pair with the one node in T2.
-	if (!feasiblePairs[0].empty()) {
-		std::cerr << " → \033[1;32mtrue\033[1;0m" << std::endl;
-		return Interleaving{sourceTree, targetTree, delta, {}};
-	} else {
-		std::cerr << " → \033[1;31mfalse\033[1;0m" << std::endl;
-		return std::nullopt;
-	}
-}
+// 	// A δ-good map exists if in the root-most layer, the one node in T1 forms a
+// 	// feasible valid pair with the one node in T2.
+// 	if (!feasiblePairs[0].empty()) {
+// 		std::cerr << " → \033[1;32mtrue\033[1;0m" << std::endl;
+// 		return Interleaving{sourceTree, targetTree, delta, {}};
+// 	} else {
+// 		std::cerr << " → \033[1;31mfalse\033[1;0m" << std::endl;
+// 		return std::nullopt;
+// 	}
+// }
 
 /// A sweep event in the δ-good map sweepline algorithm.
 struct SweepEvent {
@@ -585,7 +616,7 @@ void printFeasibleSets(const std::vector<std::optional<FeasibleSetSet>>& feasibl
 	}
 }
 
-std::optional<Interleaving> computeDeltaGoodMapFaster(const std::shared_ptr<MergeTree>& sourceTree,
+std::optional<Interleaving> computeDecisionSweepline(const std::shared_ptr<MergeTree>& sourceTree,
                                                       const std::shared_ptr<MergeTree>& targetTree,
                                                       double delta,
                                                       const RestrictionMatrix& restrictions,
@@ -842,11 +873,6 @@ Interleaving computeInterleavingDistance(const std::shared_ptr<MergeTree>& sourc
 	case DeltaGoodMapAlgorithm::DP:
 		std::cerr << "Computing interleaving distance with the Touli and Wang method..." << std::endl;
 		break;
-	case DeltaGoodMapAlgorithm::FeasiblePairsFromPrevious:
-		std::cerr << "Computing interleaving distance with the sweepline method, computing "
-		             "feasible pairs from the previous ones..."
-		          << std::endl;
-		break;
 	case DeltaGoodMapAlgorithm::Sweepline:
 		std::cerr << "Computing interleaving distance with the sweepline method, updating only "
 		             "changed feasible pairs from the previous ones..."
@@ -875,13 +901,10 @@ Interleaving computeInterleavingDistance(const std::shared_ptr<MergeTree>& sourc
 	std::optional<Interleaving> interleaving;
 	int foundIndex = -1;
 
-	auto computeDeltaGoodMap = computeDeltaGoodMapSlow;
+	auto computeDeltaGoodMap = computeDecisionDP;
 	switch (deltaGoodMapAlgorithm) {
-	case DeltaGoodMapAlgorithm::FeasiblePairsFromPrevious:
-		computeDeltaGoodMap = computeDeltaGoodMapFast;
-		break;
 	case DeltaGoodMapAlgorithm::Sweepline:
-		computeDeltaGoodMap = computeDeltaGoodMapFaster;
+		computeDeltaGoodMap = computeDecisionSweepline;
 	}
 
 	if (searchAlgorithm == SearchAlgorithm::DeltaLinearSearch) {

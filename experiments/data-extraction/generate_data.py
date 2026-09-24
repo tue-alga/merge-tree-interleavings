@@ -1,10 +1,7 @@
 import math
 import os
 import paraview
-import tempfile
-import vtk
 
-from pathlib import Path
 from restrictions import get_ttk_objects, simple_restrictions, MergeTree
 from paraview.simple import *
 
@@ -15,55 +12,6 @@ SCALAR_FIELD_NAME = "scalars-split"
 SIMPLIFICATION_THRESHOLD = 0.0
 
 DATA_GENERATION_DIRECTORY = "data/generated"
-
-# #### disable automatic camera reset on 'Show'
-# paraview.simple._DisableFirstRenderCameraReset()
-
-# def red_sea_timesteps(directory, begin, end):
-#     for i in range(begin, end):
-#         data_0vtp = XMLPolyDataReader(registrationName='data_0.vtp', FileName=[f'{directory}/data_{i}.vtp'])
-#         data_0vtp.Set(
-#             PointArrayStatus=['Normals', 'TextureCoordinates', 'Scalars_'],
-#             TimeArray='None',
-#         )
-#         calculator1 = Calculator(registrationName='Calculator1', Input=data_0vtp)
-#         calculator1.Set(
-#             ResultArrayName='scalars',
-#             Function='Scalars_',
-#         )
-#         calculator2 = Calculator(registrationName='Calculator2', Input=calculator1)
-#         calculator2.Set(
-#             ResultArrayName=SCALAR_FIELD_NAME,
-#             Function='-scalars',
-#         )
-#         SetActiveSource(calculator2)
-#         SaveData(
-#             f"{directory}/step_{i:02d}.vtp",
-#             proxy=calculator2,
-#             PointDataArrays=["scalars", SCALAR_FIELD_NAME]
-#         )
-
-
-
-def generate_timesteps(filename):
-    reader = vtk.vtkXMLImageDataReader()
-    reader.SetFileName(filename)
-    reader.update()
-
-    image = reader.GetOutput()
-    extent = image.GetExtent()
-    z_min, z_max = extent[4], extent[5]
-
-    for z in range(z_min, z_max + 1):
-        slice = vtk.vtkExtractVOI()
-        slice.SetInputData(image)
-        slice.SetVOI(extent[0], extent[1], extent[2], extent[3], z, z)
-        slice.update()
-    
-        writer = vtk.vtkXMLImageDataWriter()
-        writer.SetInputData(slice.GetOutput())
-        writer.SetFileName(os.path.join(tmp_directory, f"step_{z:04d}.vti"))
-        writer.Write()
 
 def output_merge_tree(f, tree : MergeTree):
     out = []
@@ -115,17 +63,17 @@ def output_merge_tree(f, tree : MergeTree):
     f.write('\n'.join(map(str, out)))
     f.write('\n')
 
-def generate_instances(radii, min_step, max_step, step, name):
+def generate_instances(location, radii, min_step, max_step, step, name):
     output_directory = os.path.join(DATA_GENERATION_DIRECTORY, f'{name}')
     os.makedirs(output_directory, exist_ok=True)
 
     terrains = {}
     merge_trees = {}
     
-    files = os.listdir(tmp_directory)
+    files = os.listdir(location)
     
     for i in range(min_step, min(len(files), max_step+1), step):
-        file_path = os.path.join(tmp_directory, files[i])
+        file_path = os.path.join(location, files[i])
         terrains[i], merge_trees[i] = get_ttk_objects(file_path, SCALAR_FIELD_NAME, SIMPLIFICATION_THRESHOLD)
         output_path = os.path.join(output_directory, f'merge-tree-{i:04d}.txt')
         with open(output_path, "w") as f:
@@ -143,40 +91,25 @@ def generate_instances(radii, min_step, max_step, step, name):
                     f.write("\n".join([" ".join(map(str, row)) for row in restriction]))
 
 def heatedcylinder():
-    stack = "data/raw/heatedcylinder.vti"
-    generate_timesteps(stack)
-
+    location = "data/raw/heatedcylinder"
     radii = [0, 10, math.inf]
     begin = 1000
     end = 1500
     step = 50
     name = "heated-cylinder"
 
-    generate_instances(radii, begin, end, step, name)
+    generate_instances(location, radii, begin, end, step, name)
 
 def redsea():
-    stack = "data/raw/redsea"
+    location = "data/raw/redsea"
     radii = [0, 10, 25, math.inf]
     begin = 0
     end = 59
-
-    red_sea_timesteps(begin, end)
-
     step = 5
     name = "redsea"
     
-    generate_instances(radii, begin, end, step, name)
+    generate_instances(location, radii, begin, end, step, name)
 
 if __name__ == "__main__":
-
-    # data_directory = "data/raw"
-    # with tempfile.TemporaryDirectory() as tmp_directory:
-    #     tmp_directory = Path(tmp_directory)
-
-    tmp_directory = "data/tmp"
     heatedcylinder()
-
-    # with tempfile.TemporaryDirectory() as tmp_directory:
-    #     tmp_directory = Path(tmp_directory)
-    #     generate_timesteps("data/raw/redsea.vtp")
-    #     redsea()
+    redsea()

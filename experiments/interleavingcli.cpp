@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
 	std::filesystem::path source(sourceTreeFile);
 	std::filesystem::path target(targetTreeFile);
 	std::filesystem::path restrictionMatrix(restrictionMatrixFile);
-	std::string identifier = source.filename().string() + " | " + target.filename().string() + " | " + restrictionMatrix.filename().string(); 
+	std::string identifier = restrictionMatrix.filename().string(); 
 
 
 	for (int i = 0; i < NUM_TRIALS; i++) {
