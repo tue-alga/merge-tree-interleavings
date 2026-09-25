@@ -6,8 +6,6 @@ import sys
 import os
 from time import sleep
 
-print('filename\talgorithm\tdelta\ttime_seconds\tattempt_count\tattempt_delta\tattempt_time_seconds\t...', flush=True)
-
 def runTrial(dataset, algorithm):
 
 	merge_tree_files = sorted(f for f in os.listdir(dataset) if f.startswith("merge-tree-") and f.endswith(".txt"))
@@ -29,7 +27,7 @@ def runTrial(dataset, algorithm):
 					sleep(1)
 
 if __name__ == "__main__":
-	# print('filename\talgorithm\tdelta\ttime_seconds\tattempt_count\tattempt_delta\tattempt_time_seconds\t...', flush=True)
+	print('filename\talgorithm\tdelta\ttime_seconds\tattempt_count\tattempt_delta\tattempt_time_seconds\t...', flush=True)
 	datasets = sys.argv[1]
 	runTrial(datasets, 'sweepline/exponential')
 	runTrial(datasets, 'DP/exponential')
