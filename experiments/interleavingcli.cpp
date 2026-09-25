@@ -39,7 +39,15 @@ void runTrial(std::string path, const std::shared_ptr<MergeTree>& sourceTree, co
 
 int main(int argc, char* argv[]) {
 	if (argc != 5) {
-		std::cerr << "Usage: interleavingcli <source tree file> <target tree file> <restriction matrix file> <algorithm>";
+		std::cerr << "Usage: interleavingcli <source_tree_file> <target_tree_file> [<restriction_matrix_file>] [<algorithm>]\n"
+		"where:\n"
+		"    <source_tree_file>           is the path to the first merge tree .txt file\n"
+		"    <target_tree_file>           is the path to the second merge tree .txt file\n"
+		"    <restriction_matrix_file>    is the path to a restriction matrix .txt file\n"
+		"                                 (optional: if omitted, no restrictions are used)\n"
+		"    <algorithm>                  is the algorithm to use, one of:\n"
+		"                                 DP/linear | DP/exponential | sweepline/linear | sweepline/exponential\n"
+		"                                 (optional: defaults to sweepline/exponential)\n";
 		return 1;
 	}
 
