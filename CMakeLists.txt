@@ -20,13 +20,6 @@ target_include_directories(libinterleavingdistance
         ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-add_executable(interleavingdistance
-    main.cpp
-)
-target_link_libraries(interleavingdistance
-    PRIVATE libinterleavingdistance
-)
-
 add_executable(interleavingcli
     experiments/interleavingcli.cpp
 )
