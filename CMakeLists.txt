@@ -26,5 +26,6 @@ add_executable(interleavingcli
 target_link_libraries(interleavingcli
     PRIVATE libinterleavingdistance
 )
+install(TARGETS interleavingcli DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 
 add_subdirectory(tests)
